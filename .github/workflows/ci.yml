@@ -1,0 +1,29 @@
+name: Shell CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  shell-quality:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y shellcheck
+
+      - name: ShellCheck
+        run: shellcheck ./tg-launcher.sh ./tests/test-tg-launcher.sh
+
+      - name: Syntax check
+        run: |
+          bash -n ./tg-launcher.sh
+          bash -n ./tests/test-tg-launcher.sh
+
+      - name: Functional test
+        run: ./tests/test-tg-launcher.sh

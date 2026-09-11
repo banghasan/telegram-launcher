@@ -4,122 +4,189 @@
 
 `tg-launcher.sh` menjalankan Telegram Desktop dengan `-many` dan `-workdir`, sehingga beberapa profil atau sesi Telegram dapat dijalankan menggunakan direktori kerja yang berbeda.
 
-## File yang digunakan
-
-Script aktif:
-
-```text
-/home/banghasan/Telegram/Session/bin/tg-launcher.sh
-```
-
-File lama `tg.sh` sudah dihapus setelah seluruh fungsinya dipindahkan ke script baru. File `REVIEW.md` juga sudah dihapus karena catatan penggunaan dan perubahan sekarang berada di README ini.
-
-Permission script aktif adalah `755` (`-rwxr-xr-x`).
-
-## Penggunaan dasar
+Script tetap kompatibel dengan penggunaan lama:
 
 ```bash
 ./tg-launcher.sh /path/ke/workdir
 ```
 
-Contoh:
+Perintah tersebut sama dengan `start`.
 
-```bash
-./tg-launcher.sh /home/banghasan/Telegram/Session/kumpul1
+## File proyek
+
+```text
+tg-launcher.sh
+tg-launcher.conf       # lokal, tidak dilacak Git
+config.example
+README.md
+CHANGELOG.md
+CONTRIBUTING.md
+LICENSE
+tests/test-tg-launcher.sh
 ```
 
-Script menampilkan PID Telegram setelah proses berhasil memperoleh lock dan berjalan. Jika proses masih memulai, gunakan `--status` untuk memeriksanya.
+File lama `tg.sh` dan `REVIEW.md` sudah dihapus. Installer dan symlink ke `~/.local/bin` tidak dibuat oleh proyek ini; instalasi manual sengaja diserahkan kepada pengguna.
 
-## Opsi
+Permission launcher dan test adalah `755` (`-rwxr-xr-x`).
 
-### Bantuan dan versi
-
-```bash
-./tg-launcher.sh --help
-./tg-launcher.sh --version
-```
-
-### Pemeriksaan konfigurasi
-
-Memvalidasi executable Telegram, permission workdir, lokasi state, lokasi log, serta dependency tanpa menjalankan Telegram:
+## Perintah
 
 ```bash
-./tg-launcher.sh --check /home/banghasan/Telegram/Session/kumpul1
+./tg-launcher.sh start /home/banghasan/Telegram/Session/kumpul1
+./tg-launcher.sh stop /home/banghasan/Telegram/Session/kumpul1
+./tg-launcher.sh restart /home/banghasan/Telegram/Session/kumpul1
+./tg-launcher.sh status /home/banghasan/Telegram/Session/kumpul1
+./tg-launcher.sh logs /home/banghasan/Telegram/Session/kumpul1
 ```
 
-### Dry run
-
-Menampilkan command dan lokasi state yang akan digunakan tanpa menjalankan Telegram:
-
-```bash
-./tg-launcher.sh --dry-run /home/banghasan/Telegram/Session/kumpul1
-```
-
-### Status
-
-Memeriksa apakah instance untuk workdir tertentu sedang berjalan:
+Alias kompatibilitas:
 
 ```bash
 ./tg-launcher.sh --status /home/banghasan/Telegram/Session/kumpul1
+./tg-launcher.sh --check /home/banghasan/Telegram/Session/kumpul1
+./tg-launcher.sh --dry-run /home/banghasan/Telegram/Session/kumpul1
 ```
 
-Exit status `0` berarti berjalan. Exit status `1` berarti tidak berjalan atau state-nya sudah usang.
+`stop` mengirim `SIGTERM` dan menunggu maksimal lima detik. `SIGKILL` tidak dikirim otomatis agar proses Telegram tidak dihentikan secara paksa tanpa konfirmasi.
 
-## PID dan lock
+## Validasi dan dry run
 
-Setiap workdir memiliki identitas hash sendiri di:
+Validasi executable, workdir, config, state, dan log tanpa menjalankan Telegram:
+
+```bash
+./tg-launcher.sh check /home/banghasan/Telegram/Session/kumpul1
+```
+
+Melihat command yang akan digunakan tanpa menjalankan Telegram:
+
+```bash
+./tg-launcher.sh dry-run /home/banghasan/Telegram/Session/kumpul1
+```
+
+## Konfigurasi
+
+Config file user:
+
+```text
+~/.config/tg-launcher/config
+```
+
+Jika `XDG_CONFIG_HOME` tersedia, lokasi menjadi `$XDG_CONFIG_HOME/tg-launcher/config`. Lokasi custom dapat diberikan melalui `TG_CONFIG`.
+
+Config file lokal di direktori launcher:
+
+```text
+/home/banghasan/Telegram/Session/bin/tg-launcher.conf
+```
+
+Config lokal memiliki prioritas lebih tinggi daripada config user. File ini sengaja diabaikan oleh Git agar konfigurasi/path pribadi tidak ikut ter-commit.
+
+Buat config file dengan permission privat, misalnya `600`:
+
+Template tersedia di [config.example](config.example). Salin secara manual jika diperlukan:
+
+```bash
+mkdir -p ~/.config/tg-launcher
+cp ./config.example ~/.config/tg-launcher/config
+chmod 600 ~/.config/tg-launcher/config
+```
+
+```text
+TELEGRAM_BIN=/home/banghasan/bin/Telegram
+TG_LOG=
+LOG_MAX_BYTES=5242880
+LOG_BACKUPS=3
+DESKTOP_INTEGRATION=1
+```
+
+`TG_LOG` kosong berarti log otomatis per workdir. Gunakan `TG_LOG=/dev/null` jika ingin menonaktifkan log.
+
+Prioritas konfigurasi:
+
+```text
+opsi command line > environment variable > TG_CONFIG > config lokal > config user > default
+```
+
+Contoh override tanpa mengubah config file:
+
+```bash
+TELEGRAM_BIN=/path/ke/Telegram \
+TG_LOG=/tmp/telegram.log \
+./tg-launcher.sh start /path/ke/workdir
+```
+
+Atau dengan opsi command line:
+
+```bash
+./tg-launcher.sh \
+    --telegram-bin /path/ke/Telegram \
+    --log /tmp/telegram.log \
+    start /path/ke/workdir
+```
+
+Opsi konfigurasi yang tersedia:
+
+```text
+--telegram-bin PATH
+--log PATH
+--log-max-bytes N
+--log-backups N
+--desktop-integration
+--no-desktop-integration
+```
+
+Config file memakai format `KEY=VALUE` sederhana. Jangan menggunakan `source` atau menaruh command shell di dalamnya; file dibaca sebagai data dan key yang tidak dikenal akan ditolak.
+
+## PID, lock, dan state
+
+State disimpan di:
 
 ```text
 ~/.local/state/tg-launcher/
 ```
 
-Jika `XDG_STATE_HOME` tersedia, lokasi tersebut digunakan sebagai gantinya. PID file dan lock mencegah workdir yang sama dijalankan dua kali secara tidak sengaja. Lock dilepas otomatis ketika proses launcher selesai; PID file lama dibersihkan saat peluncuran berikutnya.
+Jika `XDG_STATE_HOME` tersedia, lokasi tersebut digunakan sebagai gantinya. Setiap workdir memiliki PID file dan lock berbasis hash. Lock mencegah workdir yang sama dijalankan dua kali.
 
-## Log dan troubleshooting
+`status` tidak bergantung pada keberadaan executable Telegram saat status sedang diperiksa. Ini memungkinkan status tetap dilihat meskipun binary dipindah sementara.
 
-Default log adalah `/dev/null`, sehingga Telegram berjalan tanpa menampilkan output ke terminal. Untuk menyimpan error dan informasi startup:
+## Logging dan rotasi
 
-```bash
-TG_LOG=/home/banghasan/Telegram/Session/telegram.log \
-./tg-launcher.sh /home/banghasan/Telegram/Session/kumpul1
-```
-
-Jika launcher melaporkan proses belum siap, tunggu sebentar lalu jalankan:
-
-```bash
-./tg-launcher.sh --status /home/banghasan/Telegram/Session/kumpul1
-```
-
-## Konfigurasi opsional
-
-Lokasi executable Telegram dan file log dapat diganti tanpa mengedit script:
-
-```bash
-TELEGRAM_BIN=/path/ke/Telegram \
-TG_LOG=/path/ke/telegram.log \
-./tg-launcher.sh /path/ke/workdir
-```
-
-Default:
+Jika `TG_LOG` tidak diatur, log otomatis dibuat di:
 
 ```text
-TELEGRAM_BIN=/home/banghasan/bin/Telegram
-TG_LOG=/dev/null
+~/.local/state/tg-launcher/logs/<hash-workdir>.log
 ```
 
-File log baru yang dibuat oleh launcher diberi permission privat. Untuk troubleshooting, gunakan path log eksplisit agar error Telegram tidak hilang ke `/dev/null`.
+Default rotasi:
+
+```text
+LOG_MAX_BYTES=5242880
+LOG_BACKUPS=3
+```
+
+Saat ukuran maksimum tercapai, log lama digeser menjadi `.1`, `.2`, dan seterusnya. File log otomatis dan state directory dibuat dengan permission privat.
+
+Melihat log terakhir:
+
+```bash
+./tg-launcher.sh logs /home/banghasan/Telegram/Session/kumpul1
+```
 
 ## Integrasi desktop
 
-Launcher menjalankan Telegram dengan `DESKTOPINTEGRATION=1`. Pengaturan ini mencegah Telegram membuat file launcher baru seperti:
+Default launcher menggunakan `DESKTOP_INTEGRATION=1`, yang diteruskan sebagai `DESKTOPINTEGRATION=1` ke Telegram. Ini mencegah Telegram membuat file seperti:
 
 ```text
 ~/.local/share/applications/org.telegram.desktop._*.desktop
 ```
 
-Konsekuensinya, integrasi launcher desktop atau handler link Telegram mungkin tidak aktif untuk instance yang dijalankan melalui script ini. File `.desktop` lama tidak dihapus otomatis.
+Konsekuensinya, launcher desktop atau handler link Telegram mungkin tidak aktif untuk instance tersebut. Jika integrasi desktop memang diperlukan, gunakan:
 
-Untuk membersihkan file lama secara manual, tutup seluruh Telegram terlebih dahulu. Periksa kandidat file:
+```bash
+./tg-launcher.sh --desktop-integration start /path/ke/workdir
+```
+
+File `.desktop` lama tidak dihapus otomatis. Untuk membersihkannya secara manual, tutup seluruh Telegram terlebih dahulu, lalu periksa:
 
 ```bash
 find "${XDG_DATA_HOME:-$HOME/.local/share}/applications" \
@@ -134,16 +201,13 @@ find "${XDG_DATA_HOME:-$HOME/.local/share}/applications" \
     -exec rm -i -- {} +
 ```
 
-Launcher tidak menjalankan cleanup tersebut secara otomatis.
+## Pengembangan dan test
 
-## Verifikasi
-
-Script harus dapat diperiksa tanpa menjalankan Telegram:
+Pemeriksaan syntax:
 
 ```bash
 bash -n ./tg-launcher.sh
-./tg-launcher.sh --check /path/ke/workdir
-./tg-launcher.sh --dry-run /path/ke/workdir
+bash -n ./tests/test-tg-launcher.sh
 ```
 
 Test otomatis menggunakan executable Telegram palsu, bukan Telegram asli:
@@ -152,8 +216,14 @@ Test otomatis menggunakan executable Telegram palsu, bukan Telegram asli:
 ./tests/test-tg-launcher.sh
 ```
 
-Jika ShellCheck tersedia:
+ShellCheck:
 
 ```bash
 shellcheck ./tg-launcher.sh ./tests/test-tg-launcher.sh
 ```
+
+Workflow GitHub Actions di `.github/workflows/ci.yml` menjalankan ShellCheck, syntax check, dan test otomatis pada push serta pull request.
+
+## Lisensi dan kontribusi
+
+Lihat [LICENSE](LICENSE) untuk lisensi MIT dan [CONTRIBUTING.md](CONTRIBUTING.md) untuk alur perubahan.

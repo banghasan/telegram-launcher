@@ -1,0 +1,8 @@
+# Salin ke ~/.config/tg-launcher/config lalu ubah nilainya.
+# Gunakan permission 600 untuk file hasil salinan.
+
+TELEGRAM_BIN=/home/banghasan/bin/Telegram
+TG_LOG=
+LOG_MAX_BYTES=5242880
+LOG_BACKUPS=3
+DESKTOP_INTEGRATION=1
