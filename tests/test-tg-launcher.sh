@@ -96,7 +96,7 @@ no_color_output=$(run_launcher --color always --no-color --dry-run "$workdir")
 config_check=$(run_config_launcher check "$workdir")
 grep -q "Executable       : $fake_bin" <<<"$config_check"
 
-local_config_check=$(TG_CONFIG= \
+local_config_check=$(TG_CONFIG="" \
     XDG_CONFIG_HOME="$user_config_dir" \
     XDG_STATE_HOME="$tmp_dir/local-state" \
     "$local_launcher" check "$local_workdir")

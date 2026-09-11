@@ -15,7 +15,8 @@ readonly CHANNEL="Telegram Grup @botIndonesia"
 
 script_source="${BASH_SOURCE[0]}"
 script_dir=$(cd -- "$(dirname -- "$script_source")" && pwd -P) || exit 1
-readonly SCRIPT_PATH="$script_dir/$(basename -- "$script_source")"
+script_name=$(basename -- "$script_source")
+readonly SCRIPT_PATH="$script_dir/$script_name"
 
 if [[ -n "${XDG_CONFIG_HOME:-}" ]]; then
     user_config_file="${XDG_CONFIG_HOME%/}/tg-launcher/config"
@@ -471,11 +472,7 @@ worker_mode() {
     exec 9>"$worker_lock_file" || exit 1
     flock -n 9 || exit 75
 
-    cleanup_pid_file() {
-        rm -f -- "$worker_pid_file"
-    }
-
-    trap cleanup_pid_file EXIT
+    trap 'rm -f -- "$worker_pid_file"' EXIT
     trap 'exit 130' INT
     trap 'exit 143' TERM
 
@@ -520,7 +517,6 @@ start_instance() {
     detail 'File log' "$log_file"
 
     TELEGRAM_BIN="$telegram_bin" \
-    TG_LOG="$log_file" \
     DESKTOP_INTEGRATION="$desktop_integration" \
     nohup "$SCRIPT_PATH" --worker "$lock_file" "$pid_file" "$workdir" \
         </dev/null >>"$log_file" 2>&1 &
@@ -690,7 +686,6 @@ parse_arguments() {
 # Mode internal untuk menjaga lock tetap aktif selama Telegram berjalan.
 if [[ "${1:-}" == "--worker" ]]; then
     worker_mode "$@"
-    exit $?
 fi
 
 if [[ $# -eq 0 ]]; then
