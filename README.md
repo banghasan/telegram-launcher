@@ -32,19 +32,19 @@ Permission launcher dan test adalah `755` (`-rwxr-xr-x`).
 ## Perintah
 
 ```bash
-./tg-launcher.sh start /home/banghasan/Telegram/Session/kumpul1
-./tg-launcher.sh stop /home/banghasan/Telegram/Session/kumpul1
-./tg-launcher.sh restart /home/banghasan/Telegram/Session/kumpul1
-./tg-launcher.sh status /home/banghasan/Telegram/Session/kumpul1
-./tg-launcher.sh logs /home/banghasan/Telegram/Session/kumpul1
+./tg-launcher.sh start /path/ke/workdir
+./tg-launcher.sh stop /path/ke/workdir
+./tg-launcher.sh restart /path/ke/workdir
+./tg-launcher.sh status /path/ke/workdir
+./tg-launcher.sh logs /path/ke/workdir
 ```
 
 Alias kompatibilitas:
 
 ```bash
-./tg-launcher.sh --status /home/banghasan/Telegram/Session/kumpul1
-./tg-launcher.sh --check /home/banghasan/Telegram/Session/kumpul1
-./tg-launcher.sh --dry-run /home/banghasan/Telegram/Session/kumpul1
+./tg-launcher.sh --status /path/ke/workdir
+./tg-launcher.sh --check /path/ke/workdir
+./tg-launcher.sh --dry-run /path/ke/workdir
 ```
 
 `stop` mengirim `SIGTERM` dan menunggu maksimal lima detik. `SIGKILL` tidak dikirim otomatis agar proses Telegram tidak dihentikan secara paksa tanpa konfirmasi.
@@ -77,13 +77,13 @@ NO_COLOR=1 ./tg-launcher.sh /path/ke/workdir
 Validasi executable, workdir, config, state, dan log tanpa menjalankan Telegram:
 
 ```bash
-./tg-launcher.sh check /home/banghasan/Telegram/Session/kumpul1
+./tg-launcher.sh check /path/ke/workdir
 ```
 
 Melihat command yang akan digunakan tanpa menjalankan Telegram:
 
 ```bash
-./tg-launcher.sh dry-run /home/banghasan/Telegram/Session/kumpul1
+./tg-launcher.sh dry-run /path/ke/workdir
 ```
 
 ## Konfigurasi
@@ -99,7 +99,7 @@ Jika `XDG_CONFIG_HOME` tersedia, lokasi menjadi `$XDG_CONFIG_HOME/tg-launcher/co
 Config file lokal di direktori launcher:
 
 ```text
-/home/banghasan/Telegram/Session/bin/tg-launcher.conf
+./tg-launcher.conf
 ```
 
 Config lokal memiliki prioritas lebih tinggi daripada config user. File ini sengaja diabaikan oleh Git agar konfigurasi/path pribadi tidak ikut ter-commit.
@@ -115,7 +115,7 @@ chmod 600 ~/.config/tg-launcher/config
 ```
 
 ```text
-TELEGRAM_BIN=/home/banghasan/bin/Telegram
+TELEGRAM_BIN=/path/ke/Telegram
 TG_LOG=
 LOG_MAX_BYTES=5242880
 LOG_BACKUPS=3
@@ -194,7 +194,7 @@ Saat ukuran maksimum tercapai, log lama digeser menjadi `.1`, `.2`, dan seterusn
 Melihat log terakhir:
 
 ```bash
-./tg-launcher.sh logs /home/banghasan/Telegram/Session/kumpul1
+./tg-launcher.sh logs /path/ke/workdir
 ```
 
 ## Integrasi desktop
