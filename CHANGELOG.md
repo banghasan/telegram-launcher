@@ -2,6 +2,18 @@
 
 Semua perubahan penting pada proyek ini dicatat di file ini.
 
+## [2.0.2] - 2026-09-11
+
+### Added
+
+- Output console dengan label `[INFO]`, `[ OK ]`, `[WARN]`, dan `[ERROR]`.
+- Mode warna `auto`, `always`, dan `never`.
+- Dukungan `NO_COLOR`, `CLICOLOR`, dan `CLICOLOR_FORCE`.
+
+### Changed
+
+- Kosakata output dibuat lebih konsisten, menggunakan `Direktori kerja`, `File log`, dan `PID proses`.
+
 ## [2.0.1] - 2026-09-11
 
 ### Added

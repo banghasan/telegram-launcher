@@ -80,21 +80,27 @@ run_config_launcher() {
 }
 
 extract_pid() {
-    awk '/PID:/ { print $NF; exit }'
+    awk '/PID proses/ { print $NF; exit }'
 }
 
 run_launcher --version >/dev/null
 run_launcher --check "$workdir" >/dev/null
 run_launcher --dry-run "$workdir" >/dev/null
+plain_output=$(run_launcher --dry-run "$workdir")
+[[ "$plain_output" != *$'\033['* ]]
+colored_output=$(run_launcher --color always --dry-run "$workdir")
+[[ "$colored_output" == *$'\033['* ]]
+no_color_output=$(run_launcher --color always --no-color --dry-run "$workdir")
+[[ "$no_color_output" != *$'\033['* ]]
 
 config_check=$(run_config_launcher check "$workdir")
-grep -q "Telegram: $fake_bin" <<<"$config_check"
+grep -q "Executable       : $fake_bin" <<<"$config_check"
 
 local_config_check=$(TG_CONFIG= \
     XDG_CONFIG_HOME="$user_config_dir" \
     XDG_STATE_HOME="$tmp_dir/local-state" \
     "$local_launcher" check "$local_workdir")
-grep -q "Telegram: $fake_bin" <<<"$local_config_check"
+grep -q "Executable       : $fake_bin" <<<"$local_config_check"
 
 launch_output=$(run_launcher start "$workdir")
 telegram_pid=$(printf '%s\n' "$launch_output" | extract_pid)
@@ -102,13 +108,13 @@ telegram_pid=$(printf '%s\n' "$launch_output" | extract_pid)
 grep -qx '1' "$tmp_dir/desktop-integration.env"
 
 status_output=$(run_launcher --status "$workdir")
-grep -q 'Status: berjalan' <<<"$status_output"
+grep -q 'Telegram sedang berjalan' <<<"$status_output"
 
 status_with_missing_binary=$(TELEGRAM_BIN=/path/yang/tidak/ada \
     TG_LOG="$log_file" \
     XDG_STATE_HOME="$state_dir" \
     "$launcher" status "$workdir")
-grep -q 'Status: berjalan' <<<"$status_with_missing_binary"
+grep -q 'Telegram sedang berjalan' <<<"$status_with_missing_binary"
 
 if run_launcher start "$workdir" >/dev/null 2>&1; then
     printf '%s\n' 'Test gagal: duplicate launch seharusnya ditolak.' >&2
@@ -116,7 +122,7 @@ if run_launcher start "$workdir" >/dev/null 2>&1; then
 fi
 
 logs_output=$(run_launcher logs "$workdir")
-grep -q 'Log terakhir:' <<<"$logs_output"
+grep -q 'Menampilkan 100 baris log terakhir' <<<"$logs_output"
 
 run_launcher stop "$workdir" >/dev/null
 if run_launcher status "$workdir" >/dev/null 2>&1; then
@@ -151,7 +157,7 @@ run_launcher stop "$no_desktop_workdir" >/dev/null
 telegram_pid=""
 
 printf '0123456789' >"$log_file"
-restart_output=$(LOG_MAX_BYTES=1 LOG_BACKUPS=2 run_launcher restart "$workdir")
+restart_output=$(LOG_MAX_BYTES=1 LOG_BACKUPS=2 run_launcher restart "$workdir" 2>&1)
 telegram_pid=$(printf '%s\n' "$restart_output" | extract_pid)
 [[ "$telegram_pid" =~ ^[0-9]+$ ]]
 [[ -f "$log_file.1" ]]

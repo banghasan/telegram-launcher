@@ -49,6 +49,29 @@ Alias kompatibilitas:
 
 `stop` mengirim `SIGTERM` dan menunggu maksimal lima detik. `SIGKILL` tidak dikirim otomatis agar proses Telegram tidak dihentikan secara paksa tanpa konfirmasi.
 
+## Tampilan console
+
+Output console memakai label warna untuk membedakan informasi:
+
+```text
+[INFO] Memulai Telegram
+       Direktori kerja : /path/workdir
+       File log        : /path/telegram.log
+[ OK ] Telegram berhasil dimulai
+       PID proses      : 12345
+```
+
+Mode warna default adalah `auto`: warna hanya aktif ketika output menuju terminal. Warna otomatis tidak digunakan saat output dipipe atau diarahkan ke file. Log Telegram tetap tidak diberi escape code warna.
+
+Pengaturan manual:
+
+```bash
+./tg-launcher.sh --color auto /path/ke/workdir
+./tg-launcher.sh --color always /path/ke/workdir
+./tg-launcher.sh --no-color /path/ke/workdir
+NO_COLOR=1 ./tg-launcher.sh /path/ke/workdir
+```
+
 ## Validasi dan dry run
 
 Validasi executable, workdir, config, state, dan log tanpa menjalankan Telegram:
@@ -133,6 +156,8 @@ Opsi konfigurasi yang tersedia:
 --log-backups N
 --desktop-integration
 --no-desktop-integration
+--color auto|always|never
+--no-color
 ```
 
 Config file memakai format `KEY=VALUE` sederhana. Jangan menggunakan `source` atau menaruh command shell di dalamnya; file dibaca sebagai data dan key yang tidak dikenal akan ditolak.

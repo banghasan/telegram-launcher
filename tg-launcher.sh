@@ -7,7 +7,7 @@ set -o pipefail
 
 readonly PROGRAM="TBL"
 readonly DESCRIPTION="Telegram Bash Launcher"
-readonly VERSION="2.0.1"
+readonly VERSION="2.0.2"
 readonly RELEASE="11 September 2026"
 readonly AUTHOR="bangHasan <banghasan@gmail.com>"
 readonly WEBSITE="https://www.banghasan.com"
@@ -38,8 +38,72 @@ log_backups="3"
 desktop_integration="1"
 # ===============================
 
+color_mode="auto"
+if [[ -n "${NO_COLOR:-}" || "${CLICOLOR:-1}" == "0" ]]; then
+    color_mode="never"
+elif [[ "${CLICOLOR_FORCE:-0}" == "1" ]]; then
+    color_mode="always"
+fi
+
+setup_colors() {
+    local use_color=0
+
+    case "$color_mode" in
+        auto)
+            [[ -t 1 ]] && use_color=1
+            ;;
+        always)
+            use_color=1
+            ;;
+        never)
+            use_color=0
+            ;;
+        *)
+            die "mode warna tidak dikenal: $color_mode"
+            ;;
+    esac
+
+    if (( use_color )); then
+        color_info=$'\033[36m'
+        color_ok=$'\033[32m'
+        color_warn=$'\033[33m'
+        color_error=$'\033[31m'
+        color_reset=$'\033[0m'
+    else
+        color_info=""
+        color_ok=""
+        color_warn=""
+        color_error=""
+        color_reset=""
+    fi
+}
+
+info() {
+    printf '%b[INFO]%b %s\n' "$color_info" "$color_reset" "$*"
+}
+
+ok() {
+    printf '%b[ OK ]%b %s\n' "$color_ok" "$color_reset" "$*"
+}
+
+warn() {
+    printf '%b[WARN]%b %s\n' "$color_warn" "$color_reset" "$*" >&2
+}
+
+error() {
+    printf '%b[ERROR]%b %s\n' "$color_error" "$color_reset" "$*" >&2
+}
+
+detail() {
+    printf '       %-17s: %s\n' "$1" "$2"
+}
+
+detail_error() {
+    printf '       %-17s: %s\n' "$1" "$2" >&2
+}
+
 die() {
-    printf 'Error: %s\n' "$*" >&2
+    error "$*"
     exit 1
 }
 
@@ -124,6 +188,7 @@ validate_config_values() {
         || die 'DESKTOP_INTEGRATION hanya boleh bernilai 0 atau 1'
 }
 
+setup_colors
 require_command stat
 load_config_file "$USER_CONFIG_FILE"
 load_config_file "$LOCAL_CONFIG_FILE"
@@ -160,6 +225,8 @@ usage() {
     printf '   --log-backups N      Jumlah file backup log\n'
     printf '   --no-desktop-integration\n'
     printf '   --desktop-integration\n'
+    printf '   --color MODE        auto, always, atau never\n'
+    printf '   --no-color          Alias untuk --color never\n'
     printf '   -h, --help           Tampilkan bantuan\n'
     printf '   -V, --version        Tampilkan versi\n\n'
     printf 'Contoh:\n'
@@ -361,18 +428,20 @@ show_status() {
     local known_pid
 
     if known_pid=$(active_pid); then
-        printf 'Status: berjalan\n'
-        printf '   Workdir: %s\n' "$workdir"
-        printf '   PID: %s\n' "$known_pid"
-        printf '   Log: %s\n' "$log_file"
-        printf '   State: %s\n' "$state_dir"
+        ok 'Telegram sedang berjalan'
+        detail 'Direktori kerja' "$workdir"
+        detail 'PID proses' "$known_pid"
+        detail 'File log' "$log_file"
+        detail 'State' "$state_dir"
         return 0
     fi
 
-    printf 'Status: tidak berjalan\n'
-    printf '   Workdir: %s\n' "$workdir"
-    printf '   Log: %s\n' "$log_file"
-    [[ -e "$pid_file" ]] && printf '   Catatan: PID file tidak aktif atau sudah usang.\n'
+    warn 'Telegram tidak sedang berjalan'
+    detail_error 'Direktori kerja' "$workdir"
+    detail_error 'File log' "$log_file"
+    if [[ -e "$pid_file" ]]; then
+        detail_error 'Catatan' 'PID file tidak aktif atau sudah usang'
+    fi
     return 1
 }
 
@@ -380,12 +449,13 @@ show_logs() {
     require_command tail
 
     if [[ "$log_file" == "/dev/null" || ! -f "$log_file" ]]; then
-        printf 'Belum ada file log untuk workdir ini.\n'
-        printf '   Log: %s\n' "$log_file"
+        warn 'Belum ada file log untuk direktori kerja ini'
+        detail_error 'File log' "$log_file"
         return 0
     fi
 
-    printf 'Log terakhir: %s\n' "$log_file"
+    info 'Menampilkan 100 baris log terakhir'
+    detail 'File log' "$log_file"
     tail -n 100 -- "$log_file"
 }
 
@@ -445,9 +515,9 @@ start_instance() {
     rm -f -- "$pid_file"
     rotate_log
 
-    printf 'Menjalankan Telegram...\n'
-    printf '   Workdir: %s\n' "$workdir"
-    printf '   Log: %s\n' "$log_file"
+    info 'Memulai Telegram'
+    detail 'Direktori kerja' "$workdir"
+    detail 'File log' "$log_file"
 
     TELEGRAM_BIN="$telegram_bin" \
     TG_LOG="$log_file" \
@@ -463,7 +533,8 @@ start_instance() {
     done
 
     if known_pid=$(active_pid); then
-        printf 'Telegram telah diluncurkan. PID: %s\n' "$known_pid"
+        ok 'Telegram berhasil dimulai'
+        detail 'PID proses' "$known_pid"
         return 0
     fi
 
@@ -471,31 +542,32 @@ start_instance() {
         die "Telegram gagal diluncurkan; periksa log: $log_file"
     fi
 
-    printf 'Launcher telah dimulai, tetapi PID Telegram belum tersedia.\n'
-    printf 'Gunakan status untuk memeriksa: %s\n' "$workdir"
+    warn 'Launcher sudah dimulai, tetapi PID Telegram belum tersedia'
+    detail_error 'Perintah' "${0##*/} status $workdir"
 }
 
 stop_instance() {
     local known_pid
 
     if ! known_pid=$(active_pid); then
-        printf 'Telegram tidak sedang berjalan untuk workdir: %s\n' "$workdir"
+        warn 'Telegram tidak sedang berjalan untuk direktori kerja ini'
+        detail_error 'Direktori kerja' "$workdir"
         return 3
     fi
 
-    printf 'Menghentikan Telegram PID %s...\n' "$known_pid"
+    info "Menghentikan Telegram (PID $known_pid)"
     kill -TERM "$known_pid" 2>/dev/null \
         || die "gagal mengirim signal ke PID $known_pid"
 
     for _ in {1..50}; do
         if ! active_pid >/dev/null; then
-            printf 'Telegram berhasil dihentikan.\n'
+            ok 'Telegram berhasil dihentikan'
             return 0
         fi
         sleep 0.1
     done
 
-    printf 'Telegram belum berhenti setelah 5 detik. Tidak menggunakan SIGKILL otomatis.\n' >&2
+    warn 'Telegram belum berhenti setelah 5 detik; SIGKILL tidak dikirim otomatis'
     return 1
 }
 
@@ -532,6 +604,19 @@ parse_arguments() {
                 [[ $# -ge 2 ]] || die '--log-backups membutuhkan angka'
                 log_backups="$2"
                 shift 2
+                ;;
+            --color)
+                [[ $# -ge 2 ]] || die '--color membutuhkan mode: auto, always, atau never'
+                color_mode="$2"
+                shift 2
+                ;;
+            --color=*)
+                color_mode="${1#--color=}"
+                shift
+                ;;
+            --no-color)
+                color_mode="never"
+                shift
                 ;;
             --no-desktop-integration)
                 desktop_integration="0"
@@ -614,6 +699,7 @@ if [[ $# -eq 0 ]]; then
 fi
 
 parse_arguments "$@"
+setup_colors
 resolve_workdir "$workdir_input"
 prepare_state_paths
 
@@ -644,15 +730,15 @@ case "$action" in
         check_telegram
         check_state_location
         check_log_target
-        printf 'Konfigurasi valid. Telegram tidak dijalankan.\n'
-        printf '   Telegram: %s\n' "$telegram_bin"
-        printf '   Workdir: %s\n' "$workdir"
-        printf '   Log: %s\n' "$log_file"
-        printf '   State: %s\n' "$state_dir"
-        printf '   Config user: %s\n' "${USER_CONFIG_FILE:-none}"
-        printf '   Config lokal: %s\n' "$LOCAL_CONFIG_FILE"
+        ok 'Konfigurasi valid; Telegram tidak dijalankan'
+        detail 'Executable' "$telegram_bin"
+        detail 'Direktori kerja' "$workdir"
+        detail 'File log' "$log_file"
+        detail 'State' "$state_dir"
+        detail 'Config user' "${USER_CONFIG_FILE:-none}"
+        detail 'Config lokal' "$LOCAL_CONFIG_FILE"
         if [[ -n "$EXPLICIT_CONFIG_FILE" ]]; then
-            printf '   Config explicit: %s\n' "$EXPLICIT_CONFIG_FILE"
+            detail 'Config explicit' "$EXPLICIT_CONFIG_FILE"
         fi
         ;;
     dry-run)
@@ -660,15 +746,15 @@ case "$action" in
         check_telegram
         check_state_location
         check_log_target
-        printf 'Dry run: Telegram tidak dijalankan.\n'
+        info 'Dry run; Telegram tidak dijalankan'
+        detail 'Direktori kerja' "$workdir"
+        detail 'File log' "$log_file"
+        detail 'PID/lock' "$pid_file / $lock_file"
+        printf '       Command           : '
         if [[ "$desktop_integration" == "1" ]]; then
-            printf '   DESKTOPINTEGRATION=1 '
-        else
-            printf '   '
+            printf 'DESKTOPINTEGRATION=1 '
         fi
         printf '%q -many -workdir %q\n' "$telegram_bin" "$workdir"
-        printf '   Log: %s\n' "$log_file"
-        printf '   PID/lock: %s / %s\n' "$pid_file" "$lock_file"
         ;;
     *)
         die "perintah tidak didukung: $action"
