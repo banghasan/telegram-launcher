@@ -1,4 +1,12 @@
-# Salin ke ~/.config/tg-launcher/config lalu ubah nilainya.
+# Template konfigurasi Telegram Bash Launcher.
+#
+# Salin file ini ke salah satu lokasi berikut, lalu ubah nilainya:
+# 1. Direktori yang sama dengan tg-launcher.sh sebagai tg-launcher.conf
+#    (prioritas lebih tinggi; cocok untuk konfigurasi khusus repository/launcher)
+# 2. ~/.config/tg-launcher/config
+#    (konfigurasi user secara umum)
+#
+# Jika kedua file tersedia, tg-launcher.conf lokal akan diprioritaskan.
 # Gunakan permission 600 untuk file hasil salinan.
 
 TELEGRAM_BIN=/home/banghasan/bin/Telegram
